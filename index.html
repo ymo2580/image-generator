@@ -1,0 +1,1502 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>이미지 생성기</title>
+<meta name="description" content="토픽 여러 개를 한 번에 입력하면 AI가 순서대로 이미지를 만들어주는 무료 도구">
+<meta property="og:title" content="이미지 생성기">
+<meta property="og:description" content="토픽 여러 개를 한 번에 입력하면 AI가 순서대로 이미지를 만들어주는 무료 도구">
+<meta property="og:image" content="/icon-512.png">
+
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="/favicon-16.png">
+<link rel="apple-touch-icon" sizes="192x192" href="/icon-192.png">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Pretendard', sans-serif;
+    background: #0f1115;
+    color: #e6e8eb;
+    min-height: 100vh;
+    padding: 20px;
+    line-height: 1.5;
+  }
+  .container { max-width: 1280px; margin: 0 auto; }
+
+  header { text-align: center; margin-bottom: 24px; padding: 24px 0 16px; }
+  h1 {
+    font-size: 28px;
+    font-weight: 600;
+    margin-bottom: 8px;
+    background: linear-gradient(135deg, #ff6b6b, #ffa06b);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .subtitle { font-size: 14px; color: #8a8f98; }
+
+  .mode-selector {
+    display: flex;
+    gap: 8px;
+    justify-content: center;
+    margin-bottom: 24px;
+    background: #1a1d23;
+    padding: 6px;
+    border-radius: 12px;
+    border: 1px solid #2a2e36;
+    max-width: 500px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+  .mode-btn {
+    flex: 1;
+    padding: 10px 14px;
+    background: transparent;
+    color: #8a8f98;
+    border: none;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 500;
+    border-radius: 8px;
+    transition: all 0.15s;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+  }
+  .mode-btn:hover { color: #e6e8eb; background: #0f1115; }
+  .mode-btn.active {
+    background: #2a3a5a;
+    color: #4a8fff;
+  }
+  .mode-btn .mode-title { font-size: 13px; font-weight: 600; }
+  .mode-btn .mode-desc { font-size: 10px; color: #6a6f78; }
+  .mode-btn.active .mode-desc { color: #6a8aaa; }
+
+  .tabs {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 20px;
+    border-bottom: 1px solid #2a2e36;
+    padding-bottom: 0;
+  }
+  .tab {
+    padding: 12px 20px;
+    background: transparent;
+    color: #8a8f98;
+    border: none;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1px;
+    transition: all 0.15s;
+  }
+  .tab:hover { color: #e6e8eb; }
+  .tab.active { color: #ff8a5b; border-bottom-color: #ff8a5b; }
+  .tab .count {
+    background: #2a2e36;
+    color: #b8bcc4;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 11px;
+    margin-left: 6px;
+  }
+  .tab.active .count { background: #ff8a5b; color: white; }
+
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+
+  .guide-banner {
+    background: #1a1d23;
+    border: 1px solid #2a3a5a;
+    border-radius: 12px;
+    padding: 14px 18px;
+    margin-bottom: 20px;
+    display: flex;
+    gap: 14px;
+    align-items: center;
+  }
+  .guide-banner.free-mode { border-color: #2a5a3a; }
+  .guide-banner .icon {
+    background: #2a3a5a; color: #4a8fff;
+    width: 30px; height: 30px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 600;
+    flex-shrink: 0;
+    font-size: 13px;
+  }
+  .guide-banner.free-mode .icon { background: #2a5a3a; color: #5acf80; }
+  .guide-banner .text { font-size: 13px; color: #b8bcc4; flex: 1; }
+  .guide-banner .text strong { color: #e6e8eb; }
+  .guide-banner a { color: #4a8fff; text-decoration: none; cursor: pointer; }
+  .guide-banner button {
+    background: transparent;
+    color: #8a8f98;
+    border: none;
+    cursor: pointer;
+    font-size: 18px;
+    padding: 4px 8px;
+  }
+
+  .layout {
+    display: grid;
+    grid-template-columns: 460px 1fr;
+    gap: 20px;
+  }
+  @media (max-width: 960px) {
+    .layout { grid-template-columns: 1fr; }
+    h1 { font-size: 22px; }
+  }
+  .panel {
+    background: #1a1d23;
+    border-radius: 12px;
+    padding: 20px;
+    border: 1px solid #2a2e36;
+  }
+  .panel h2 {
+    font-size: 15px;
+    font-weight: 600;
+    margin-bottom: 16px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid #2a2e36;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .panel h2 .badge {
+    background: #2a3a5a;
+    color: #4a8fff;
+    font-size: 11px;
+    padding: 3px 8px;
+    border-radius: 10px;
+    font-weight: 500;
+  }
+
+  .field { margin-bottom: 14px; }
+  .field label {
+    display: block;
+    font-size: 12px;
+    font-weight: 500;
+    margin-bottom: 6px;
+    color: #b8bcc4;
+  }
+  .field input, .field select, .field textarea {
+    width: 100%;
+    background: #0f1115;
+    color: #e6e8eb;
+    border: 1px solid #2a2e36;
+    border-radius: 8px;
+    padding: 10px 12px;
+    font-size: 13px;
+    font-family: inherit;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  .field textarea { resize: vertical; min-height: 50px; }
+  .field input:focus, .field select:focus, .field textarea:focus { border-color: #4a8fff; }
+  .row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+  .api-key-section {
+    background: #0f1115;
+    border: 1px solid #2a2e36;
+    border-radius: 8px;
+    padding: 12px;
+    margin-bottom: 16px;
+  }
+  .api-key-section .help {
+    font-size: 11px;
+    color: #8a8f98;
+    margin-top: 6px;
+    line-height: 1.5;
+  }
+  .api-key-section a { color: #4a8fff; text-decoration: none; }
+
+  .topics-section { margin-bottom: 16px; }
+  .topic-card {
+    background: #0f1115;
+    border: 1px solid #2a2e36;
+    border-radius: 10px;
+    padding: 12px;
+    margin-bottom: 10px;
+    position: relative;
+  }
+  .topic-card .topic-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+  }
+  .topic-card .topic-num {
+    font-size: 11px;
+    font-weight: 600;
+    color: #4a8fff;
+    background: #1a2540;
+    padding: 2px 8px;
+    border-radius: 10px;
+  }
+  .topic-card .delete-btn {
+    background: transparent;
+    color: #6a6f78;
+    border: none;
+    cursor: pointer;
+    font-size: 16px;
+    padding: 0 6px;
+  }
+  .topic-card .delete-btn:hover { color: #ff6b6b; }
+  .topic-card input,
+  .topic-card textarea {
+    background: #1a1d23;
+    color: #e6e8eb;
+    border-color: #2a2e36;
+    margin-bottom: 6px;
+    display: block;
+    width: 100%;
+  }
+  .topic-card textarea { min-height: 40px; font-size: 12px; margin-bottom: 0; }
+  .topic-card input.topic-name { margin-bottom: 8px; }
+
+  .add-topic-btn {
+    width: 100%;
+    background: transparent;
+    color: #4a8fff;
+    border: 1px dashed #2a3a5a;
+    border-radius: 8px;
+    padding: 10px;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .add-topic-btn:hover { background: #1a2540; border-color: #4a8fff; }
+
+  .toggle-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    background: #0f1115;
+    border: 1px solid #2a2e36;
+    border-radius: 8px;
+    margin-bottom: 14px;
+    cursor: pointer;
+  }
+  .toggle-row input[type="checkbox"] { width: auto; margin: 0; cursor: pointer; }
+  .toggle-row label {
+    font-size: 12px;
+    margin: 0;
+    color: #e6e8eb;
+    cursor: pointer;
+    flex: 1;
+  }
+  .toggle-row .help {
+    font-size: 10px;
+    color: #6a6f78;
+    margin-top: 2px;
+    display: block;
+  }
+
+  select option.random-option {
+    background: #2a3a5a;
+    color: #4a8fff;
+    font-weight: 600;
+  }
+
+  button.primary {
+    width: 100%;
+    background: linear-gradient(135deg, #ff6b6b, #ff8a5b);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 14px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    margin-top: 8px;
+    transition: opacity 0.15s;
+  }
+  button.primary:hover { opacity: 0.9; }
+  button.primary:disabled { background: #444; cursor: not-allowed; opacity: 0.6; }
+
+  .preset-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 14px;
+  }
+  .preset-tag {
+    background: #0f1115;
+    border: 1px solid #2a2e36;
+    color: #b8bcc4;
+    padding: 6px 10px;
+    border-radius: 16px;
+    font-size: 11px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .preset-tag:hover, .preset-tag.active {
+    background: #2a3a5a;
+    border-color: #4a8fff;
+    color: #e6e8eb;
+  }
+
+  .result-area { min-height: 400px; }
+  .empty-state {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    color: #6a6f78;
+    text-align: center;
+    min-height: 400px;
+  }
+  .empty-state .placeholder { font-size: 14px; }
+  .empty-state .placeholder small {
+    display: block;
+    margin-top: 8px;
+    font-size: 12px;
+    color: #4a4f58;
+  }
+
+  .progress-bar {
+    background: #0f1115;
+    border-radius: 8px;
+    padding: 12px 16px;
+    margin-bottom: 16px;
+    border: 1px solid #2a2e36;
+  }
+  .progress-bar .progress-text {
+    font-size: 13px;
+    margin-bottom: 8px;
+    display: flex;
+    justify-content: space-between;
+  }
+  .progress-bar .progress-track {
+    height: 6px;
+    background: #2a2e36;
+    border-radius: 3px;
+    overflow: hidden;
+  }
+  .progress-bar .progress-fill {
+    height: 100%;
+    background: linear-gradient(135deg, #ff6b6b, #ff8a5b);
+    transition: width 0.3s;
+  }
+
+  .gallery {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 12px;
+  }
+  .gallery-item {
+    background: #0f1115;
+    border: 1px solid #2a2e36;
+    border-radius: 8px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+  .gallery-item .thumb {
+    aspect-ratio: 1;
+    background: #1a1d23;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #6a6f78;
+    font-size: 12px;
+    text-align: center;
+    padding: 12px;
+    position: relative;
+    overflow: hidden;
+  }
+  .gallery-item .thumb img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    cursor: pointer;
+  }
+  .gallery-item .thumb.pending { color: #6a6f78; }
+  .gallery-item .thumb.loading { color: #4a8fff; }
+  .gallery-item .thumb.error { background: #2a1818; color: #ffaaaa; }
+  .gallery-item .info {
+    padding: 10px 12px;
+    border-top: 1px solid #2a2e36;
+  }
+  .gallery-item .info .topic-title {
+    font-size: 12px;
+    font-weight: 500;
+    margin-bottom: 4px;
+    color: #e6e8eb;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .gallery-item .info .meta {
+    font-size: 10px;
+    color: #6a6f78;
+    margin-bottom: 6px;
+  }
+  .gallery-item .info .actions {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+  .gallery-item .info .actions a,
+  .gallery-item .info .actions button {
+    flex: 1;
+    background: #2a2e36;
+    color: #e6e8eb;
+    border: none;
+    padding: 6px;
+    border-radius: 4px;
+    font-size: 11px;
+    cursor: pointer;
+    text-decoration: none;
+    text-align: center;
+    min-width: 60px;
+  }
+  .gallery-item .info .actions a:hover,
+  .gallery-item .info .actions button:hover { background: #3a3e46; }
+  .gallery-item .info .actions .delete { background: transparent; color: #6a6f78; }
+  .gallery-item .info .actions .delete:hover { background: #3a1a1a; color: #ffaaaa; }
+
+  .loading-spinner {
+    display: inline-block;
+    width: 24px;
+    height: 24px;
+    border: 3px solid #2a2e36;
+    border-top-color: #4a8fff;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .download-all-btn,
+  .archive-btn {
+    background: #2a2e36;
+    color: #e6e8eb;
+    border: 1px solid #3a3e46;
+    padding: 8px 16px;
+    border-radius: 6px;
+    font-size: 12px;
+    cursor: pointer;
+    text-decoration: none;
+    display: inline-block;
+    margin-left: 6px;
+  }
+  .archive-btn { background: #2a3a5a; color: #4a8fff; border-color: #2a3a5a; }
+  .archive-btn:hover { background: #2a4a7a; }
+
+  .error {
+    background: #3a1a1a;
+    border: 1px solid #6a2a2a;
+    color: #ffaaaa;
+    padding: 10px;
+    border-radius: 6px;
+    font-size: 12px;
+    margin-top: 12px;
+  }
+
+  .archive-toolbar {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+  .archive-toolbar input[type="search"] {
+    flex: 1;
+    min-width: 200px;
+    background: #1a1d23;
+    color: #e6e8eb;
+    border: 1px solid #2a2e36;
+    border-radius: 8px;
+    padding: 10px 14px;
+    font-size: 13px;
+    font-family: inherit;
+    outline: none;
+  }
+  .archive-toolbar input[type="search"]:focus { border-color: #4a8fff; }
+  .archive-toolbar select {
+    background: #1a1d23;
+    color: #e6e8eb;
+    border: 1px solid #2a2e36;
+    border-radius: 8px;
+    padding: 10px 14px;
+    font-size: 13px;
+    font-family: inherit;
+    outline: none;
+  }
+  .archive-stats {
+    background: #1a1d23;
+    border: 1px solid #2a2e36;
+    border-radius: 8px;
+    padding: 12px 16px;
+    margin-bottom: 16px;
+    font-size: 13px;
+    color: #b8bcc4;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .archive-stats strong { color: #e6e8eb; }
+  .danger-btn {
+    background: #3a1a1a;
+    color: #ffaaaa;
+    border: 1px solid #6a2a2a;
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-size: 11px;
+    cursor: pointer;
+  }
+  .danger-btn:hover { background: #4a2a2a; }
+
+  footer {
+    text-align: center;
+    margin-top: 40px;
+    padding: 20px;
+    color: #6a6f78;
+    font-size: 12px;
+  }
+
+  .modal-overlay {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.7);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+    padding: 20px;
+  }
+  .modal-overlay.show { display: flex; }
+  .modal {
+    background: #1a1d23;
+    border: 1px solid #2a2e36;
+    border-radius: 12px;
+    padding: 24px;
+    max-width: 500px;
+    width: 100%;
+    max-height: 90vh;
+    overflow-y: auto;
+  }
+  .modal h3 { font-size: 18px; margin-bottom: 16px; }
+  .modal ol { padding-left: 20px; line-height: 1.8; font-size: 13px; color: #b8bcc4; }
+  .modal ol li { margin-bottom: 10px; }
+  .modal a { color: #4a8fff; text-decoration: none; }
+  .modal img { max-width: 100%; max-height: 70vh; border-radius: 8px; margin-bottom: 12px; }
+  .modal .close-btn {
+    margin-top: 16px;
+    background: #2a2e36;
+    color: #e6e8eb;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 6px;
+    cursor: pointer;
+    width: 100%;
+  }
+
+  .hidden { display: none !important; }
+</style>
+</head>
+<body>
+
+<div class="container">
+  <header>
+    <h1>이미지 생성기</h1>
+    <p class="subtitle">여러 토픽을 한 번에 입력하면 AI가 순서대로 이미지를 만들어줍니다</p>
+  </header>
+
+  <div class="mode-selector">
+    <button class="mode-btn active" data-mode="free">
+      <span class="mode-title">🆓 무료 모드</span>
+      <span class="mode-desc">키 없이 바로 사용 (Pollinations)</span>
+    </button>
+    <button class="mode-btn" data-mode="gemini">
+      <span class="mode-title">💎 Gemini 모드</span>
+      <span class="mode-desc">고품질, API 키 필요</span>
+    </button>
+  </div>
+
+  <div class="tabs">
+    <button class="tab active" data-tab="generate">생성</button>
+    <button class="tab" data-tab="archive">아카이브 <span class="count" id="archiveCount">0</span></button>
+  </div>
+
+  <div class="tab-panel active" id="panel-generate">
+    <div class="guide-banner free-mode" id="guideBannerFree">
+      <div class="icon">✓</div>
+      <div class="text">
+        <strong>무료 모드</strong> · API 키 없이 바로 사용 가능해요. 토픽 입력하고 생성 버튼만 누르면 됩니다!
+      </div>
+      <button class="close-banner-btn">×</button>
+    </div>
+
+    <div class="guide-banner hidden" id="guideBannerGemini">
+      <div class="icon">!</div>
+      <div class="text">
+        <strong>Gemini 모드</strong> · Google Gemini API 키가 필요해요. <a id="openGuide">사용 방법 보기</a>
+      </div>
+      <button class="close-banner-btn">×</button>
+    </div>
+
+    <div class="layout">
+      <div class="panel">
+        <h2>설정</h2>
+
+        <div class="api-key-section hidden" id="apiKeySection">
+          <div class="field" style="margin-bottom: 0;">
+            <label>Gemini API 키</label>
+            <input type="password" id="apiKey" placeholder="여기에 API 키 입력 (이 브라우저에만 저장)" />
+            <div class="help">
+              <a href="https://aistudio.google.com/apikey" target="_blank">aistudio.google.com/apikey</a>에서 무료 발급
+            </div>
+          </div>
+        </div>
+
+        <div class="topics-section">
+          <label style="display: block; font-size: 12px; font-weight: 500; margin-bottom: 8px; color: #b8bcc4;">토픽 목록</label>
+          <div id="topicsList"></div>
+          <button class="add-topic-btn" id="addTopicBtn">+ 토픽 추가</button>
+        </div>
+
+        <div class="field">
+          <label>용도 프리셋 (전체 공통)</label>
+          <div class="preset-tags" id="purposeTags">
+            <div class="preset-tag active" data-purpose="custom">커스텀</div>
+            <div class="preset-tag" data-purpose="ad">광고</div>
+            <div class="preset-tag" data-purpose="class">학급 자료</div>
+            <div class="preset-tag" data-purpose="sns">SNS 썸네일</div>
+            <div class="preset-tag" data-purpose="blog">블로그 헤더</div>
+            <div class="preset-tag" data-purpose="quiz">퀴즈 이미지</div>
+          </div>
+        </div>
+
+        <div class="row">
+          <div class="field">
+            <label>스타일</label>
+            <select id="style">
+              <option value="ai_recommend" class="random-option">🤖 AI 자동 추천 (토픽에 어울리는 스타일)</option>
+              <option value="flat illustration, vibrant colors, modern design">플랫 일러스트</option>
+              <option value="photorealistic, professional photography, sharp focus">실사 사진</option>
+              <option value="watercolor painting, soft brushstrokes, artistic">수채화</option>
+              <option value="3D render, smooth shading, modern">3D 렌더</option>
+              <option value="minimal icon style, simple shapes, clean lines">미니멀 아이콘</option>
+              <option value="cartoon style, friendly, kid-friendly">카툰 / 어린이용</option>
+              <option value="korean webtoon style, cel-shading">한국 웹툰풍</option>
+              <option value="pixel art, retro game style, 16-bit">픽셀 아트</option>
+              <option value="oil painting, classical art, rich textures">유화</option>
+              <option value="anime style, japanese animation, vibrant">애니메이션 / 일본풍</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>비율</label>
+            <select id="ratio">
+              <option value="1:1">1:1 정사각형</option>
+              <option value="9:16">9:16 세로</option>
+              <option value="16:9">16:9 가로</option>
+              <option value="4:3">4:3 (수업 자료)</option>
+              <option value="3:4">3:4 세로</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="field">
+          <label>분위기 / 톤</label>
+          <select id="mood">
+            <option value="bright, cheerful, energetic">밝고 활기찬</option>
+            <option value="calm, peaceful, soft">차분하고 부드러운</option>
+            <option value="professional, clean, business">전문적·비즈니스</option>
+            <option value="warm, cozy, friendly">따뜻하고 친근한</option>
+            <option value="bold, dramatic, high contrast">강렬하고 임팩트 있는</option>
+            <option value="minimal, simple, clean">미니멀하고 깔끔한</option>
+          </select>
+        </div>
+
+        <div class="toggle-row">
+          <input type="checkbox" id="noTextToggle" checked />
+          <label for="noTextToggle">
+            이미지에 글자/텍스트 넣지 않기
+            <span class="help">기본 ON · 한글 텍스트는 깨지는 경우가 많아요</span>
+          </label>
+        </div>
+
+        <div class="field">
+          <label>전체 공통 추가 요청사항 (선택)</label>
+          <textarea id="extra" placeholder="예: 한국적인 느낌으로, 인물 없이"></textarea>
+        </div>
+
+        <button class="primary" id="generateBtn">전체 이미지 생성</button>
+
+        <div id="errorBox"></div>
+      </div>
+
+      <div class="panel">
+        <h2>
+          생성 결과
+          <span id="resultBadge" class="badge" style="display:none;"></span>
+        </h2>
+        <div id="resultArea">
+          <div class="empty-state">
+            <div class="placeholder">
+              이미지가 여기에 표시됩니다
+              <small>왼쪽에서 토픽을 입력하고 생성 버튼을 눌러주세요</small>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="tab-panel" id="panel-archive">
+    <div class="archive-stats">
+      <div>
+        저장된 이미지: <strong id="archiveTotalCount">0</strong>장
+        <span style="margin-left: 12px; color: #6a6f78;">(이 브라우저에만 저장됨)</span>
+      </div>
+      <button class="danger-btn" id="clearAllBtn">전체 삭제</button>
+    </div>
+
+    <div class="archive-toolbar">
+      <input type="search" id="archiveSearch" placeholder="토픽 이름으로 검색..." />
+      <select id="archiveSort">
+        <option value="newest">최신순</option>
+        <option value="oldest">오래된순</option>
+        <option value="topic">토픽 이름순</option>
+      </select>
+      <button class="download-all-btn" id="downloadArchiveBtn">전체 다운로드</button>
+    </div>
+
+    <div id="archiveArea">
+      <div class="empty-state">
+        <div class="placeholder">
+          저장된 이미지가 없습니다
+          <small>생성한 이미지를 "아카이브 저장" 버튼으로 저장하세요</small>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    개인 프로젝트 · API 키와 이미지는 브라우저에만 저장되며 외부로 전송되지 않습니다
+  </footer>
+</div>
+
+<div class="modal-overlay" id="guideModal">
+  <div class="modal">
+    <h3>Gemini API 키 발급 가이드</h3>
+    <ol>
+      <li><a href="https://aistudio.google.com/apikey" target="_blank">aistudio.google.com/apikey</a> 접속</li>
+      <li>구글 계정으로 로그인 (별도 가입 X)</li>
+      <li>"Create API key" 버튼 클릭 → 키 복사</li>
+      <li>"Gemini API 키" 칸에 붙여넣기</li>
+      <li>토픽 추가 → 스타일·비율 선택 → 생성!</li>
+    </ol>
+    <p style="font-size: 12px; color: #8a8f98; margin-top: 16px; line-height: 1.6;">
+      💡 한 번 입력하면 다음부터는 자동으로 채워집니다.<br>
+      💡 무료 모드(Pollinations)는 키 없이 바로 사용 가능해요.<br>
+      💡 마음에 드는 이미지는 "아카이브 저장"으로 보관할 수 있어요.
+    </p>
+    <button class="close-btn" id="closeModal">확인</button>
+  </div>
+</div>
+
+<div class="modal-overlay" id="imageModal">
+  <div class="modal" style="max-width: 800px;">
+    <img id="modalImage" src="" alt="" />
+    <div id="modalInfo" style="font-size: 13px; color: #b8bcc4; margin-bottom: 12px;"></div>
+    <button class="close-btn" id="closeImageModal">닫기</button>
+  </div>
+</div>
+
+<script>
+const PURPOSE_PRESETS = {
+  custom: '',
+  ad: 'eye-catching, marketing-friendly composition, high visual appeal, clear focal point',
+  class: 'educational, age-appropriate for elementary school students, clear and simple',
+  sns: 'social media optimized, scroll-stopping, vibrant',
+  blog: 'header banner composition, leaves space for text overlay',
+  quiz: 'quiz illustration style, clear subject, no text in image, simple background'
+};
+
+const STYLE_LIST = [
+  { name: '플랫 일러스트', value: 'flat illustration, vibrant colors, modern design' },
+  { name: '실사 사진', value: 'photorealistic, professional photography, sharp focus' },
+  { name: '수채화', value: 'watercolor painting, soft brushstrokes, artistic' },
+  { name: '3D 렌더', value: '3D render, smooth shading, modern' },
+  { name: '미니멀 아이콘', value: 'minimal icon style, simple shapes, clean lines' },
+  { name: '카툰', value: 'cartoon style, friendly, kid-friendly' },
+  { name: '한국 웹툰풍', value: 'korean webtoon style, cel-shading' },
+  { name: '픽셀 아트', value: 'pixel art, retro game style, 16-bit' },
+  { name: '유화', value: 'oil painting, classical art, rich textures' },
+  { name: '애니메이션', value: 'anime style, japanese animation, vibrant' }
+];
+
+const NO_TEXT_INSTRUCTION = `
+
+CRITICAL REQUIREMENT - NO TEXT IN IMAGE:
+- The image MUST be PURELY VISUAL with ZERO text, letters, words, characters, or typography
+- Do NOT include any Korean characters (한글), Chinese characters, Japanese characters, English letters, numbers, or any written symbols
+- Do NOT include any signs, labels, captions, watermarks, logos with text
+- The visual should communicate purely through imagery
+- This is the MOST IMPORTANT requirement`;
+
+const RATIO_TO_PX = {
+  '1:1': { width: 1024, height: 1024 },
+  '9:16': { width: 720, height: 1280 },
+  '16:9': { width: 1280, height: 720 },
+  '4:3': { width: 1024, height: 768 },
+  '3:4': { width: 768, height: 1024 }
+};
+
+const STYLE_RECOMMEND_RULES = [
+  { keywords: ['벚꽃', '봄', '꽃', '풍경', '자연', '계절', '단풍', '가을', '겨울', '눈', '바다', '하늘', '산'], style: STYLE_LIST[2] },
+  { keywords: ['아이', '어린이', '학생', '유아', '아기', '동물원', '동물', '귀여운', '캐릭터'], style: STYLE_LIST[5] },
+  { keywords: ['게임', '레트로', '8비트', '픽셀', '닌텐도', '아케이드'], style: STYLE_LIST[7] },
+  { keywords: ['웹툰', '드라마', '연애', 'k-pop', '아이돌', '소년', '소녀', '청춘'], style: STYLE_LIST[6] },
+  { keywords: ['애니', '일본', '망가', '히어로'], style: STYLE_LIST[9] },
+  { keywords: ['사진', '실사', '제품', '음식', '인물', '비즈니스', '회사', '오피스', '뉴스'], style: STYLE_LIST[1] },
+  { keywords: ['클래식', '예술', '명화', '르네상스', '바로크'], style: STYLE_LIST[8] },
+  { keywords: ['아이콘', '로고', '심플', '미니멀', '단순'], style: STYLE_LIST[4] },
+  { keywords: ['3d', '입체', '렌더', 'cgi'], style: STYLE_LIST[3] }
+];
+
+let currentMode = 'free';
+let selectedPurpose = 'custom';
+let topicCounter = 0;
+let generatedResults = [];
+let archiveImages = [];
+
+const DB_NAME = 'image_generator_archive';
+const DB_VERSION = 1;
+const STORE_NAME = 'images';
+let db = null;
+
+function initDB() {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open(DB_NAME, DB_VERSION);
+    request.onerror = () => reject(request.error);
+    request.onsuccess = () => { db = request.result; resolve(db); };
+    request.onupgradeneeded = (e) => {
+      const database = e.target.result;
+      if (!database.objectStoreNames.contains(STORE_NAME)) {
+        const store = database.createObjectStore(STORE_NAME, { keyPath: 'id', autoIncrement: true });
+        store.createIndex('createdAt', 'createdAt', { unique: false });
+        store.createIndex('topic', 'topic', { unique: false });
+      }
+    };
+  });
+}
+
+function saveToArchive(item) {
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction([STORE_NAME], 'readwrite');
+    const request = tx.objectStore(STORE_NAME).add(item);
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error);
+  });
+}
+
+function loadArchive() {
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction([STORE_NAME], 'readonly');
+    const request = tx.objectStore(STORE_NAME).getAll();
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error);
+  });
+}
+
+function deleteFromArchive(id) {
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction([STORE_NAME], 'readwrite');
+    const request = tx.objectStore(STORE_NAME).delete(id);
+    request.onsuccess = () => resolve();
+    request.onerror = () => reject(request.error);
+  });
+}
+
+function clearArchive() {
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction([STORE_NAME], 'readwrite');
+    const request = tx.objectStore(STORE_NAME).clear();
+    request.onsuccess = () => resolve();
+    request.onerror = () => reject(request.error);
+  });
+}
+
+function setMode(mode) {
+  currentMode = mode;
+  localStorage.setItem('image_generator_mode', mode);
+  document.querySelectorAll('.mode-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.mode === mode);
+  });
+  document.getElementById('apiKeySection').classList.toggle('hidden', mode !== 'gemini');
+  document.getElementById('guideBannerFree').classList.toggle('hidden', mode !== 'free');
+  document.getElementById('guideBannerGemini').classList.toggle('hidden', mode !== 'gemini');
+}
+
+document.querySelectorAll('.mode-btn').forEach(btn => {
+  btn.addEventListener('click', () => setMode(btn.dataset.mode));
+});
+
+const savedMode = localStorage.getItem('image_generator_mode') || 'free';
+setMode(savedMode);
+
+document.querySelectorAll('.tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    tab.classList.add('active');
+    document.getElementById('panel-' + tab.dataset.tab).classList.add('active');
+    if (tab.dataset.tab === 'archive') renderArchive();
+  });
+});
+
+const apiKeyInput = document.getElementById('apiKey');
+apiKeyInput.value = localStorage.getItem('gemini_api_key') || '';
+apiKeyInput.addEventListener('change', () => {
+  localStorage.setItem('gemini_api_key', apiKeyInput.value);
+});
+
+function addTopicCard(name = '', desc = '') {
+  topicCounter++;
+  const id = topicCounter;
+  const card = document.createElement('div');
+  card.className = 'topic-card';
+  card.dataset.id = id;
+  card.innerHTML = `
+    <div class="topic-header">
+      <span class="topic-num">#${id}</span>
+      <button class="delete-btn" data-action="delete" title="삭제">×</button>
+    </div>
+    <input type="text" class="topic-name" placeholder="토픽 이름 (예: 벚꽃이 핀 학교 운동장)" value="${escapeHtml(name)}" />
+    <textarea class="topic-desc" placeholder="추가 설명 (선택)">${escapeHtml(desc)}</textarea>
+  `;
+  document.getElementById('topicsList').appendChild(card);
+  card.querySelector('.delete-btn').addEventListener('click', () => {
+    card.remove();
+    renumberTopics();
+  });
+  card.querySelector('.topic-name').focus();
+}
+
+function renumberTopics() {
+  document.querySelectorAll('.topic-card').forEach((card, idx) => {
+    card.querySelector('.topic-num').textContent = `#${idx + 1}`;
+  });
+}
+
+function escapeHtml(str) {
+  const div = document.createElement('div');
+  div.textContent = str || '';
+  return div.innerHTML;
+}
+
+addTopicCard();
+document.getElementById('addTopicBtn').addEventListener('click', () => addTopicCard());
+
+document.querySelectorAll('.preset-tag').forEach(tag => {
+  tag.addEventListener('click', () => {
+    document.querySelectorAll('.preset-tag').forEach(t => t.classList.remove('active'));
+    tag.classList.add('active');
+    selectedPurpose = tag.dataset.purpose;
+  });
+});
+
+function recommendStyleByKeyword(topicName, topicDesc) {
+  const text = (topicName + ' ' + (topicDesc || '')).toLowerCase();
+  for (const rule of STYLE_RECOMMEND_RULES) {
+    for (const keyword of rule.keywords) {
+      if (text.includes(keyword.toLowerCase())) return rule.style;
+    }
+  }
+  return STYLE_LIST[0];
+}
+
+async function recommendStyleByAI(apiKey, topicName, topicDesc) {
+  const styleListText = STYLE_LIST.map((s, i) => `${i + 1}. ${s.name} - ${s.value}`).join('\n');
+  const recommendPrompt = `You are an art director. Pick the BEST visual style for this topic.
+
+Topic: "${topicName}"${topicDesc ? `\nDetails: ${topicDesc}` : ''}
+
+Styles:
+${styleListText}
+
+Respond with ONLY the number (1-${STYLE_LIST.length}). No explanation.`;
+
+  try {
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: recommendPrompt }] }],
+          generationConfig: { temperature: 0.7, maxOutputTokens: 10 }
+        })
+      }
+    );
+    const data = await response.json();
+    if (data.error) throw new Error(data.error.message);
+    const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    const match = text.match(/\d+/);
+    if (match) {
+      const num = parseInt(match[0]);
+      if (num >= 1 && num <= STYLE_LIST.length) return STYLE_LIST[num - 1];
+    }
+    return STYLE_LIST[0];
+  } catch (err) {
+    console.warn('AI recommend failed, using keyword:', err);
+    return recommendStyleByKeyword(topicName, topicDesc);
+  }
+}
+
+function buildPrompt(topicName, topicDesc, options = {}) {
+  const styleSelect = document.getElementById('style');
+  const mood = document.getElementById('mood').value;
+  const extra = document.getElementById('extra').value.trim();
+  const purpose = PURPOSE_PRESETS[selectedPurpose];
+  const ratio = document.getElementById('ratio').value;
+  const noText = document.getElementById('noTextToggle').checked;
+
+  let styleValue = styleSelect.value;
+  let styleDisplayName = styleSelect.options[styleSelect.selectedIndex].text;
+
+  if (styleValue === 'ai_recommend') {
+    if (options.recommendedStyle) {
+      styleValue = options.recommendedStyle.value;
+      const suffix = currentMode === 'gemini' ? ' (AI 추천)' : ' (자동 추천)';
+      styleDisplayName = options.recommendedStyle.name + suffix;
+    } else {
+      styleValue = STYLE_LIST[0].value;
+      styleDisplayName = STYLE_LIST[0].name;
+    }
+  }
+
+  let prompt = '';
+  if (noText) {
+    prompt += `IMPORTANT: Generate an image with absolutely NO text, NO letters, NO Korean characters, NO words. The image must be purely visual.\n\n`;
+  }
+  prompt += `Create an image about: ${topicName}`;
+  if (topicDesc) prompt += `. Details: ${topicDesc}`;
+  prompt += `. Style: ${styleValue}`;
+  prompt += `. Mood: ${mood}`;
+  if (purpose) prompt += `. Purpose context: ${purpose}`;
+  prompt += `. Aspect ratio: ${ratio}`;
+  if (extra) prompt += `. Additional requirements: ${extra}`;
+  if (noText) prompt += NO_TEXT_INSTRUCTION;
+
+  return { prompt, styleDisplayName, ratio };
+}
+
+function initGallery(topics) {
+  generatedResults = topics.map((t, i) => ({
+    id: i, topic: t.name, desc: t.desc,
+    status: 'pending', imageUrl: null, error: null,
+    styleName: '', archived: false
+  }));
+  renderGallery();
+  updateProgress();
+}
+
+function renderGallery() {
+  const resultArea = document.getElementById('resultArea');
+  const completed = generatedResults.filter(r => r.status === 'done').length;
+  const total = generatedResults.length;
+  let html = '';
+
+  if (total > 0) {
+    const percent = Math.round((completed / total) * 100);
+    html += `
+      <div class="progress-bar">
+        <div class="progress-text">
+          <span>진행 상황: ${completed} / ${total} 완료</span>
+          <span style="color: #4a8fff;">${percent}%</span>
+        </div>
+        <div class="progress-track">
+          <div class="progress-fill" style="width: ${percent}%;"></div>
+        </div>
+      </div>
+    `;
+  }
+
+  if (completed >= 1) {
+    html += `
+      <div style="text-align: right; margin-bottom: 12px;">
+        ${completed >= 2 ? `<button class="download-all-btn" id="downloadAllBtn">전체 다운로드 (${completed}장)</button>` : ''}
+        <button class="archive-btn" id="archiveAllBtn">전체 아카이브 저장</button>
+      </div>
+    `;
+  }
+
+  html += '<div class="gallery">';
+  generatedResults.forEach((r, idx) => {
+    let thumbContent = '';
+    let thumbClass = '';
+    if (r.status === 'pending') { thumbContent = '대기 중'; thumbClass = 'pending'; }
+    else if (r.status === 'loading') { thumbContent = '<div class="loading-spinner"></div>'; thumbClass = 'loading'; }
+    else if (r.status === 'done') { thumbContent = `<img src="${r.imageUrl}" alt="${escapeHtml(r.topic)}" data-idx="${idx}" class="clickable-img" />`; }
+    else if (r.status === 'error') { thumbContent = '⚠️ 실패<br><span style="font-size:10px;">' + escapeHtml(r.error || '오류') + '</span>'; thumbClass = 'error'; }
+
+    const filename = makeFilename(r.topic, idx + 1);
+    const downloadBtn = r.status === 'done' ? `<a href="${r.imageUrl}" download="${filename}">다운로드</a>` : '';
+    const archiveBtn = r.status === 'done' ? `<button data-archive-idx="${idx}">${r.archived ? '✓ 저장됨' : '아카이브'}</button>` : '';
+    const styleInfo = r.styleName ? `<div class="meta">${escapeHtml(r.styleName)}</div>` : '';
+
+    html += `
+      <div class="gallery-item">
+        <div class="thumb ${thumbClass}">${thumbContent}</div>
+        <div class="info">
+          <div class="topic-title">#${idx + 1} ${escapeHtml(r.topic)}</div>
+          ${styleInfo}
+          <div class="actions">${downloadBtn}${archiveBtn}</div>
+        </div>
+      </div>
+    `;
+  });
+  html += '</div>';
+  resultArea.innerHTML = html;
+
+  const downloadAllBtn = document.getElementById('downloadAllBtn');
+  if (downloadAllBtn) downloadAllBtn.addEventListener('click', downloadAll);
+  const archiveAllBtn = document.getElementById('archiveAllBtn');
+  if (archiveAllBtn) archiveAllBtn.addEventListener('click', archiveAll);
+  document.querySelectorAll('[data-archive-idx]').forEach(btn => {
+    btn.addEventListener('click', (e) => archiveSingle(parseInt(e.target.dataset.archiveIdx)));
+  });
+  document.querySelectorAll('.clickable-img').forEach(img => {
+    img.addEventListener('click', (e) => {
+      const idx = parseInt(e.target.dataset.idx);
+      const r = generatedResults[idx];
+      showImageModal(r.imageUrl, `#${idx + 1} ${r.topic}`);
+    });
+  });
+}
+
+function makeFilename(topic, idx) {
+  const safe = topic.replace(/\s+/g, '_').replace(/[^a-zA-Z0-9가-힣_]/g, '');
+  return `${safe}_${idx}.png`;
+}
+
+function updateProgress() {
+  const completed = generatedResults.filter(r => r.status === 'done').length;
+  const total = generatedResults.length;
+  const badge = document.getElementById('resultBadge');
+  if (total > 0) { badge.style.display = 'inline-block'; badge.textContent = `${completed} / ${total}`; }
+  else { badge.style.display = 'none'; }
+}
+
+async function downloadAll() {
+  for (let idx = 0; idx < generatedResults.length; idx++) {
+    const r = generatedResults[idx];
+    if (r.status === 'done') {
+      const a = document.createElement('a');
+      a.href = r.imageUrl;
+      a.download = makeFilename(r.topic, idx + 1);
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      await new Promise(resolve => setTimeout(resolve, 300));
+    }
+  }
+}
+
+async function archiveSingle(idx) {
+  const r = generatedResults[idx];
+  if (!r || r.status !== 'done' || r.archived) return;
+  try {
+    await saveToArchive({
+      topic: r.topic, desc: r.desc, imageUrl: r.imageUrl,
+      styleName: r.styleName, createdAt: Date.now()
+    });
+    r.archived = true;
+    renderGallery();
+    await updateArchiveCount();
+  } catch (err) {
+    alert('아카이브 저장 실패: ' + err.message);
+  }
+}
+
+async function archiveAll() {
+  const toArchive = generatedResults.filter(r => r.status === 'done' && !r.archived);
+  if (toArchive.length === 0) { alert('저장할 이미지가 없습니다'); return; }
+  for (const r of toArchive) {
+    try {
+      await saveToArchive({
+        topic: r.topic, desc: r.desc, imageUrl: r.imageUrl,
+        styleName: r.styleName, createdAt: Date.now()
+      });
+      r.archived = true;
+    } catch (err) { console.error(err); }
+  }
+  renderGallery();
+  await updateArchiveCount();
+  alert(`${toArchive.length}장 아카이브에 저장되었습니다`);
+}
+
+async function updateArchiveCount() {
+  if (!db) return;
+  try {
+    const items = await loadArchive();
+    document.getElementById('archiveCount').textContent = items.length;
+    document.getElementById('archiveTotalCount').textContent = items.length;
+  } catch (err) { console.error(err); }
+}
+
+async function renderArchive() {
+  if (!db) return;
+  try {
+    archiveImages = await loadArchive();
+    const sortType = document.getElementById('archiveSort').value;
+    const searchQuery = document.getElementById('archiveSearch').value.toLowerCase().trim();
+    let filtered = archiveImages;
+    if (searchQuery) filtered = filtered.filter(img => img.topic.toLowerCase().includes(searchQuery));
+    if (sortType === 'newest') filtered.sort((a, b) => b.createdAt - a.createdAt);
+    else if (sortType === 'oldest') filtered.sort((a, b) => a.createdAt - b.createdAt);
+    else if (sortType === 'topic') filtered.sort((a, b) => a.topic.localeCompare(b.topic));
+
+    document.getElementById('archiveTotalCount').textContent = archiveImages.length;
+    const area = document.getElementById('archiveArea');
+
+    if (filtered.length === 0) {
+      area.innerHTML = `
+        <div class="empty-state">
+          <div class="placeholder">
+            ${archiveImages.length === 0 ? '저장된 이미지가 없습니다' : '검색 결과가 없습니다'}
+            <small>${archiveImages.length === 0 ? '생성한 이미지를 "아카이브 저장" 버튼으로 저장하세요' : '다른 키워드로 검색해보세요'}</small>
+          </div>
+        </div>
+      `;
+      return;
+    }
+
+    let html = '<div class="gallery">';
+    filtered.forEach(img => {
+      const date = new Date(img.createdAt).toLocaleString('ko-KR');
+      const filename = makeFilename(img.topic, img.id);
+      html += `
+        <div class="gallery-item">
+          <div class="thumb">
+            <img src="${img.imageUrl}" alt="${escapeHtml(img.topic)}" data-archive-id="${img.id}" class="clickable-archive-img" />
+          </div>
+          <div class="info">
+            <div class="topic-title">${escapeHtml(img.topic)}</div>
+            <div class="meta">${date}${img.styleName ? ' · ' + escapeHtml(img.styleName) : ''}</div>
+            <div class="actions">
+              <a href="${img.imageUrl}" download="${filename}">다운로드</a>
+              <button class="delete" data-delete-id="${img.id}">삭제</button>
+            </div>
+          </div>
+        </div>
+      `;
+    });
+    html += '</div>';
+    area.innerHTML = html;
+
+    document.querySelectorAll('[data-delete-id]').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        const id = parseInt(e.target.dataset.deleteId);
+        if (confirm('이 이미지를 삭제하시겠습니까?')) {
+          await deleteFromArchive(id);
+          await renderArchive();
+          await updateArchiveCount();
+        }
+      });
+    });
+    document.querySelectorAll('.clickable-archive-img').forEach(img => {
+      img.addEventListener('click', (e) => {
+        const id = parseInt(e.target.dataset.archiveId);
+        const item = archiveImages.find(i => i.id === id);
+        if (item) showImageModal(item.imageUrl, item.topic);
+      });
+    });
+  } catch (err) { console.error(err); }
+}
+
+document.getElementById('archiveSearch').addEventListener('input', () => renderArchive());
+document.getElementById('archiveSort').addEventListener('change', () => renderArchive());
+
+document.getElementById('clearAllBtn').addEventListener('click', async () => {
+  if (!confirm('아카이브의 모든 이미지를 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.')) return;
+  await clearArchive();
+  await renderArchive();
+  await updateArchiveCount();
+});
+
+document.getElementById('downloadArchiveBtn').addEventListener('click', async () => {
+  if (archiveImages.length === 0) { alert('다운로드할 이미지가 없습니다'); return; }
+  for (let i = 0; i < archiveImages.length; i++) {
+    const img = archiveImages[i];
+    const a = document.createElement('a');
+    a.href = img.imageUrl;
+    a.download = makeFilename(img.topic, img.id);
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    await new Promise(resolve => setTimeout(resolve, 300));
+  }
+});
+
+function showImageModal(url, info) {
+  document.getElementById('modalImage').src = url;
+  document.getElementById('modalInfo').textContent = info;
+  document.getElementById('imageModal').classList.add('show');
+}
+
+document.getElementById('closeImageModal').addEventListener('click', () => {
+  document.getElementById('imageModal').classList.remove('show');
+});
+document.getElementById('imageModal').addEventListener('click', (e) => {
+  if (e.target === document.getElementById('imageModal')) e.target.classList.remove('show');
+});
+
+async function generateWithPollinations(topicName, topicDesc, resultIdx) {
+  const styleSelect = document.getElementById('style');
+  const isAIRecommend = styleSelect.value === 'ai_recommend';
+  generatedResults[resultIdx].status = 'loading';
+
+  let recommendedStyle = null;
+  if (isAIRecommend) {
+    generatedResults[resultIdx].styleName = '🔍 스타일 분석 중...';
+    renderGallery();
+    recommendedStyle = recommendStyleByKeyword(topicName, topicDesc);
+  }
+
+  const { prompt, styleDisplayName, ratio } = buildPrompt(topicName, topicDesc, { recommendedStyle });
+  generatedResults[resultIdx].styleName = styleDisplayName;
+  renderGallery();
+
+  try {
+    const dimensions = RATIO_TO_PX[ratio] || RATIO_TO_PX['1:1'];
+    const seed = Math.floor(Math.random() * 1000000);
+    const encodedPrompt = encodeURIComponent(prompt);
+    const url = `https://image.pollinations.ai/prompt/${encodedPrompt}?width=${dimensions.width}&height=${dimensions.height}&seed=${seed}&nologo=true`;
+
+    const response = await fetch(url);
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const blob = await response.blob();
+    const imageUrl = await new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result);
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
+
+    generatedResults[resultIdx].status = 'done';
+    generatedResults[resultIdx].imageUrl = imageUrl;
+  } catch (err) {
+    generatedResults[resultIdx].status = 'error';
+    generatedResults[resultIdx].error = err.message.substring(0, 100);
+  }
+  renderGallery();
+  updateProgress();
+}
+
+async function generateWithGemini(apiKey, topicName, topicDesc, resultIdx) {
+  const styleSelect = document.getElementById('style');
+  const isAIRecommend = styleSelect.value === 'ai_recommend';
+  generatedResults[resultIdx].status = 'loading';
+
+  let recommendedStyle = null;
+  if (isAIRecommend) {
+    generatedResults[resultIdx].styleName = '🤖 AI가 스타일 분석 중...';
+    renderGallery();
+    recommendedStyle = await recommendStyleByAI(apiKey, topicName, topicDesc);
+  }
+
+  const { prompt, styleDisplayName } = buildPrompt(topicName, topicDesc, { recommendedStyle });
+  generatedResults[resultIdx].styleName = styleDisplayName;
+  renderGallery();
+
+  try {
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image:generateContent?key=${apiKey}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+      }
+    );
+    const data = await response.json();
+    if (data.error) throw new Error(data.error.message || 'API 오류');
+    const parts = data.candidates?.[0]?.content?.parts || [];
+    const imagePart = parts.find(p => p.inlineData);
+    if (!imagePart) throw new Error('이미지 데이터 없음');
+    const imageData = imagePart.inlineData.data;
+    const mimeType = imagePart.inlineData.mimeType || 'image/png';
+    const imageUrl = `data:${mimeType};base64,${imageData}`;
+    generatedResults[resultIdx].status = 'done';
+    generatedResults[resultIdx].imageUrl = imageUrl;
+  } catch (err) {
+    generatedResults[resultIdx].status = 'error';
+    generatedResults[resultIdx].error = err.message.substring(0, 100);
+  }
+  renderGallery();
+  updateProgress();
+}
+
+document.getElementById('generateBtn').addEventListener('click', async () => {
+  const errorBox = document.getElementById('errorBox');
+  const btn = document.getElementById('generateBtn');
+  errorBox.innerHTML = '';
+
+  let apiKey = '';
+  if (currentMode === 'gemini') {
+    apiKey = apiKeyInput.value.trim();
+    if (!apiKey) {
+      errorBox.innerHTML = '<div class="error">Gemini 모드는 API 키가 필요합니다. 무료 모드로 전환하거나 키를 입력해주세요.</div>';
+      document.getElementById('guideModal').classList.add('show');
+      return;
+    }
+  }
+
+  const topicCards = document.querySelectorAll('.topic-card');
+  const topics = [];
+  topicCards.forEach(card => {
+    const name = card.querySelector('.topic-name').value.trim();
+    const desc = card.querySelector('.topic-desc').value.trim();
+    if (name) topics.push({ name, desc });
+  });
+
+  if (topics.length === 0) {
+    errorBox.innerHTML = '<div class="error">토픽을 하나 이상 입력해주세요.</div>';
+    return;
+  }
+
+  initGallery(topics);
+  btn.disabled = true;
+
+  for (let i = 0; i < topics.length; i++) {
+    btn.textContent = `생성 중... (${i + 1}/${topics.length})`;
+    if (currentMode === 'free') {
+      await generateWithPollinations(topics[i].name, topics[i].desc, i);
+    } else {
+      await generateWithGemini(apiKey, topics[i].name, topics[i].desc, i);
+    }
+  }
+
+  btn.disabled = false;
+  btn.textContent = '전체 이미지 생성';
+});
+
+const guideModal = document.getElementById('guideModal');
+document.getElementById('openGuide').addEventListener('click', (e) => {
+  e.preventDefault();
+  guideModal.classList.add('show');
+});
+document.getElementById('closeModal').addEventListener('click', () => guideModal.classList.remove('show'));
+document.querySelectorAll('.close-banner-btn').forEach(btn => {
+  btn.addEventListener('click', (e) => {
+    e.target.closest('.guide-banner').style.display = 'none';
+  });
+});
+guideModal.addEventListener('click', (e) => {
+  if (e.target === guideModal) guideModal.classList.remove('show');
+});
+
+initDB().then(() => updateArchiveCount()).catch(err => console.error('DB init failed:', err));
+</script>
+
+</body>
+</html>
